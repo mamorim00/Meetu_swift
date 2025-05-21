@@ -6,19 +6,45 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            FeedView()
+                .tabItem {
+                    Label("Feed", systemImage: "house")
+                }
+            
+            SearchView()
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+            
+            CreateView()
+                .tabItem {
+                    Label("Create", systemImage: "plus.circle")
+                }
+            
+            ChatView()
+                .tabItem {
+                    Label("Chats", systemImage: "bubble.left.and.bubble.right")
+                }
+            
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.circle")
+                }
         }
-        .padding()
     }
 }
 
 #Preview {
-    ContentView()
+    // Create an AuthViewModel for the preview
+    let authVM = AuthViewModel()
+    // (Optional) Pre-set a dummy user so you preview the logged-in state
+    authVM.user = Auth.auth().currentUser  // or leave nil to preview the login screen
+
+    return ContentView()
+        .environmentObject(authVM)
 }

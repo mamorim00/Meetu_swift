@@ -1,19 +1,34 @@
 import Foundation
-import FirebaseFirestoreSwift
+import FirebaseFirestore
 
 struct Activity: Identifiable, Codable {
     @DocumentID var id: String?
+    
+    // Firestore fields
     var title: String
     var description: String
     var category: String
     var location: String
     var dateTime: String
     var isPublic: Bool
-    var createdAt: Date?
-    var userId: String
-    var displayName: String
+    
+    // stored as a number in Firestore
+    var createdAt: Double?
+    
+    // nested under `createdBy`
+    var createdBy: Creator
+    
     var maxParticipants: Int
     var participantIds: [String]
     var latitude: Double
     var longitude: Double
+    
+    struct Creator: Codable {
+        var displayName: String
+        var userId: String
+    }
+    
+    // Only needed if you want convenience flat access:
+    var displayName: String { createdBy.displayName }
+    var userId: String       { createdBy.userId }
 }

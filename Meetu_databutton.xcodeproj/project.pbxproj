@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7226CF4C2DDDB57C0076DC41 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 7226CF4B2DDDB57C0076DC41 /* FirebaseAnalytics */; };
+		7226CF4E2DDDB5800076DC41 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7226CF4D2DDDB5800076DC41 /* FirebaseAuth */; };
+		7226CF502DDDB5860076DC41 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 7226CF4F2DDDB5860076DC41 /* FirebaseMessaging */; };
+		7226CF522DDDB58C0076DC41 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7226CF512DDDB58C0076DC41 /* FirebaseDatabase */; };
+		7226CF542DDDB5910076DC41 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7226CF532DDDB5910076DC41 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7226CF2D2DDDB3030076DC41 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +37,30 @@
 		7226CF362DDDB3030076DC41 /* Meetu_databuttonUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Meetu_databuttonUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7226CF592DDDB5A50076DC41 /* Exceptions for "Meetu_databutton" folder in "Meetu_databuttonTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"GoogleService-Info.plist",
+			);
+			target = 7226CF2B2DDDB3030076DC41 /* Meetu_databuttonTests */;
+		};
+		7226CF5A2DDDB5A50076DC41 /* Exceptions for "Meetu_databutton" folder in "Meetu_databuttonUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"GoogleService-Info.plist",
+			);
+			target = 7226CF352DDDB3030076DC41 /* Meetu_databuttonUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7226CF1E2DDDB2FE0076DC41 /* Meetu_databutton */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7226CF592DDDB5A50076DC41 /* Exceptions for "Meetu_databutton" folder in "Meetu_databuttonTests" target */,
+				7226CF5A2DDDB5A50076DC41 /* Exceptions for "Meetu_databutton" folder in "Meetu_databuttonUITests" target */,
+			);
 			path = Meetu_databutton;
 			sourceTree = "<group>";
 		};
@@ -52,6 +81,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7226CF502DDDB5860076DC41 /* FirebaseMessaging in Frameworks */,
+				7226CF4C2DDDB57C0076DC41 /* FirebaseAnalytics in Frameworks */,
+				7226CF522DDDB58C0076DC41 /* FirebaseDatabase in Frameworks */,
+				7226CF542DDDB5910076DC41 /* FirebaseFirestore in Frameworks */,
+				7226CF4E2DDDB5800076DC41 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +112,7 @@
 				7226CF1E2DDDB2FE0076DC41 /* Meetu_databutton */,
 				7226CF2F2DDDB3030076DC41 /* Meetu_databuttonTests */,
 				7226CF392DDDB3030076DC41 /* Meetu_databuttonUITests */,
+				7226CF4A2DDDB57C0076DC41 /* Frameworks */,
 				7226CF1D2DDDB2FE0076DC41 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +125,13 @@
 				7226CF362DDDB3030076DC41 /* Meetu_databuttonUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7226CF4A2DDDB57C0076DC41 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +154,11 @@
 			);
 			name = Meetu_databutton;
 			packageProductDependencies = (
+				7226CF4B2DDDB57C0076DC41 /* FirebaseAnalytics */,
+				7226CF4D2DDDB5800076DC41 /* FirebaseAuth */,
+				7226CF4F2DDDB5860076DC41 /* FirebaseMessaging */,
+				7226CF512DDDB58C0076DC41 /* FirebaseDatabase */,
+				7226CF532DDDB5910076DC41 /* FirebaseFirestore */,
 			);
 			productName = Meetu_databutton;
 			productReference = 7226CF1C2DDDB2FE0076DC41 /* Meetu_databutton.app */;
@@ -195,6 +242,9 @@
 			);
 			mainGroup = 7226CF132DDDB2FE0076DC41;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7226CF1D2DDDB2FE0076DC41 /* Products */;
 			projectDirPath = "";
@@ -552,6 +602,45 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.13.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7226CF4B2DDDB57C0076DC41 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		7226CF4D2DDDB5800076DC41 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		7226CF4F2DDDB5860076DC41 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		7226CF512DDDB58C0076DC41 /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		7226CF532DDDB5910076DC41 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7226CF142DDDB2FE0076DC41 /* Project object */;
 }
