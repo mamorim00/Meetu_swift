@@ -1,4 +1,3 @@
-//
 //  ContentView.swift
 //  Meetu_databutton
 //
@@ -9,42 +8,43 @@ import SwiftUI
 import FirebaseAuth
 
 struct ContentView: View {
+    
+    @StateObject private var feedViewModel = FeedViewModel()
+   
+
     var body: some View {
         TabView {
+            // Feed Tab
             FeedView()
+                .environmentObject(feedViewModel)
                 .tabItem {
                     Label("Feed", systemImage: "house")
                 }
-            
+
+            // Search Tab
             SearchView()
+                .environmentObject(feedViewModel)
                 .tabItem {
                     Label("Search", systemImage: "magnifyingglass")
                 }
-            
+
+            // Create Tab
             CreateView()
                 .tabItem {
                     Label("Create", systemImage: "plus.circle")
                 }
-            
-            ChatView()
+
+            // Chats Tab
+            ChatListView()
                 .tabItem {
                     Label("Chats", systemImage: "bubble.left.and.bubble.right")
                 }
-            
+
+            // Profile Tab
             ProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person.circle")
                 }
         }
     }
-}
-
-#Preview {
-    // Create an AuthViewModel for the preview
-    let authVM = AuthViewModel()
-    // (Optional) Pre-set a dummy user so you preview the logged-in state
-    authVM.user = Auth.auth().currentUser  // or leave nil to preview the login screen
-
-    return ContentView()
-        .environmentObject(authVM)
 }

@@ -12,6 +12,7 @@
 		7226CF502DDDB5860076DC41 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 7226CF4F2DDDB5860076DC41 /* FirebaseMessaging */; };
 		7226CF522DDDB58C0076DC41 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7226CF512DDDB58C0076DC41 /* FirebaseDatabase */; };
 		7226CF542DDDB5910076DC41 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7226CF532DDDB5910076DC41 /* FirebaseFirestore */; };
+		722B3C092DDE08B60093B547 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 722B3C082DDE08B60093B547 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,6 +87,7 @@
 				7226CF522DDDB58C0076DC41 /* FirebaseDatabase in Frameworks */,
 				7226CF542DDDB5910076DC41 /* FirebaseFirestore in Frameworks */,
 				7226CF4E2DDDB5800076DC41 /* FirebaseAuth in Frameworks */,
+				722B3C092DDE08B60093B547 /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,6 +161,7 @@
 				7226CF4F2DDDB5860076DC41 /* FirebaseMessaging */,
 				7226CF512DDDB58C0076DC41 /* FirebaseDatabase */,
 				7226CF532DDDB5910076DC41 /* FirebaseFirestore */,
+				722B3C082DDE08B60093B547 /* FirebaseStorage */,
 			);
 			productName = Meetu_databutton;
 			productReference = 7226CF1C2DDDB2FE0076DC41 /* Meetu_databutton.app */;
@@ -639,6 +642,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		722B3C082DDE08B60093B547 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7226CF492DDDB5330076DC41 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

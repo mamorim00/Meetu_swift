@@ -4,24 +4,22 @@
 //
 //  Created by Marina Amorim on 21.5.2025.
 //
-//
-//  ActivityCard.swift
-//  Meetu_databutton
-//
-//  Created by Marina Amorim on 21.5.2025.
-//
 
 import SwiftUI
 import FirebaseAuth
 
-// No `private` on the struct
 struct ActivityCard: View {
     @EnvironmentObject var viewModel: FeedViewModel
     let activity: Activity
     
-    // Make this a computed property so it isn't part of the memberwise init
+    // Computed so it doesn’t affect the init’s visibility
     private var currentUserId: String? {
         Auth.auth().currentUser?.uid
+    }
+    
+    /// True when the activity has reached its capacity
+    private var isFull: Bool {
+        activity.participantIds.count >= activity.maxParticipants
     }
 
     var body: some View {
@@ -47,30 +45,46 @@ struct ActivityCard: View {
 
             // Date & Time
             if let date = ISO8601DateFormatter().date(from: activity.dateTime) {
-                Text("\(date.formatted(date: .abbreviated, time: .shortened))")
+                Text(date, style: .date) + Text(" ") + Text(date, style: .time)
                     .font(.caption2)
                     .foregroundColor(.gray)
             }
 
-            // Join/Leave button and participant count
+            // Join/Leave button, Full badge, and participant count
             HStack {
                 if let uid = currentUserId {
                     if activity.participantIds.contains(uid) {
+                        // You're in—allow leaving
                         Button("Leave") {
                             viewModel.leave(activity)
                         }
                         .buttonStyle(.bordered)
                         .tint(.red)
+
+                    } else if isFull {
+                        // Full and you're not in—show badge
+                        Text("Full")
+                            .font(.caption)
+                            .bold()
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(.systemRed).opacity(0.2))
+                            .foregroundColor(.red)
+                            .cornerRadius(8)
+
                     } else {
+                        // Not full and not in—allow joining
                         Button("Join") {
                             viewModel.join(activity)
                         }
                         .buttonStyle(.borderedProminent)
+                        .disabled(isFull)
                     }
                 }
 
                 Spacer()
 
+                // Always show count / capacity
                 Text("\(activity.participantIds.count)/\(activity.maxParticipants)")
                     .font(.caption)
                     .foregroundColor(.secondary)

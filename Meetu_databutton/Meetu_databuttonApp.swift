@@ -9,6 +9,8 @@ import SwiftUI
 import FirebaseCore
 import FirebaseAuth
 
+
+
 // Only one FirebaseApp.configure() call in AppDelegate
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
@@ -25,17 +27,20 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct Meetu_databuttonApp: App {
     // Wire up the AppDelegate so configure runs at launch
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+   
 
     // Auth view model observes FirebaseAuth state
     @StateObject private var authViewModel = AuthViewModel()
-
+    
     var body: some Scene {
         WindowGroup {
             Group {
+                
                 if authViewModel.user != nil {
                     // Signed in → main TabView
                     ContentView()
-                        .environmentObject(authViewModel)
+                      .environmentObject(authViewModel)
+
                 } else {
                     // Not signed in → show login/register flow
                     LoginView()
@@ -46,6 +51,9 @@ struct Meetu_databuttonApp: App {
                 // Start listening to auth changes
                 authViewModel.listen()
             }
-        }
+            .onReceive(authViewModel.$userProfile) { _ in
+                // nothing else needed, simply the published var will update
+            }
+      }
     }
 }

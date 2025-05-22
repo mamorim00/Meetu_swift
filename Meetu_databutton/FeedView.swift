@@ -14,7 +14,7 @@ class FeedViewModel: ObservableObject {
     @Published var activities: [Activity] = []
     @Published var errorMessage: String?
     
-    private let service = FirestoreService()
+    private let service = FirestoreService.shared
     private var cancellables = Set<AnyCancellable>()
 
     init() {

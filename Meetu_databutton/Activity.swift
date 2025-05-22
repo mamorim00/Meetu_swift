@@ -1,6 +1,16 @@
 import Foundation
 import FirebaseFirestore
 
+struct UserProfile: Identifiable, Codable, Equatable {
+    @DocumentID var id: String?   
+    var displayName: String
+    var email: String?
+    var photoUrl: String?
+    var friends: [String] // list of user IDs
+    var displayName_lowercase: String? // <-- Add this line
+}
+
+
 struct Activity: Identifiable, Codable {
     @DocumentID var id: String?
     
@@ -31,4 +41,8 @@ struct Activity: Identifiable, Codable {
     // Only needed if you want convenience flat access:
     var displayName: String { createdBy.displayName }
     var userId: String       { createdBy.userId }
+    
+    
 }
+
+
