@@ -5,7 +5,7 @@ struct UserProfile: Identifiable, Codable, Equatable {
     @DocumentID var id: String?   
     var displayName: String
     var email: String?
-    var photoUrl: String?
+    var photoURL: String?
     var friends: [String] // list of user IDs
     var displayName_lowercase: String? // <-- Add this line
 }
@@ -21,10 +21,10 @@ struct Activity: Identifiable, Codable {
     var location: String
     var dateTime: String
     var isPublic: Bool
+    var bio: String?
+    var title_lowercase: String
     
-    // stored as a number in Firestore
-    var createdAt: Double?
-    
+    var archived: Bool
     // nested under `createdBy`
     var createdBy: Creator
     

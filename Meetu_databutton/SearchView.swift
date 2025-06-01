@@ -65,7 +65,9 @@ struct SearchView: View {
             }
             .navigationTitle("Search")
             .searchable(text: $vm.searchText, prompt: "Search \(vm.category.rawValue.lowercased())")
-            .onChange(of: vm.searchText) { _ in vm.performSearch() }
+            .onChange(of: vm.searchText) {
+                vm.performSearch()
+            }
         }
     }
 
@@ -119,12 +121,8 @@ struct SearchView: View {
             }
             .listStyle(.plain)
         }
-        .onAppear {
-          print("🔍 SearchView – authViewModel.user =", authViewModel.user as Any)
-          print("🔍 SearchView – authViewModel.userProfile =", authViewModel.userProfile as Any)
         }
 
-    }
 }
 
 struct UserCard: View {
@@ -132,7 +130,7 @@ struct UserCard: View {
 
     var body: some View {
         HStack(alignment: .center) {
-            AsyncImage(url: URL(string: user.photoUrl ?? "")) { image in
+            AsyncImage(url: URL(string: user.photoURL ?? "")) { image in
                 image.resizable()
             } placeholder: {
                 Circle().fill(Color.gray.opacity(0.3))

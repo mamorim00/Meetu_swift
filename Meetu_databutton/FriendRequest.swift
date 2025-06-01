@@ -28,6 +28,9 @@ struct FriendRequest: Identifiable, Codable {
     var status: String // "pending", "accepted", "rejected"
     var timestamp: Timestamp
 }
+
+
+import SwiftUI
 import SwiftUI
 
 struct OtherUserProfileView: View {
@@ -44,27 +47,7 @@ struct OtherUserProfileView: View {
     var body: some View {
         VStack(spacing: 16) {
             if let profile = profile {
-                // 1) Show either the downloaded image or a default avatar
-                if let urlString = profile.photoUrl,
-                   let url = URL(string: urlString)
-                {
-                    AsyncImage(url: url) { img in
-                        img
-                          .resizable()
-                          .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        ProgressView()
-                    }
-                    .frame(width: 120, height: 120)
-                    .clipShape(Circle())
-                } else {
-                    // Fallback avatar
-                    Image(systemName: "person.crop.circle.fill")
-                        .resizable()
-                        .frame(width: 120, height: 120)
-                        .foregroundColor(.gray)
-                }
-
+                ProfileImageView(urlString: profile.photoURL, size: 120)
                 Text(profile.displayName)
                     .font(.title)
 
@@ -78,16 +61,12 @@ struct OtherUserProfileView: View {
                 }
                 .disabled(requestState != .none)
             } else {
-                // Still loading
-                VStack(spacing: 8) {
-                    ProgressView()
-                    Text("Loading user…")
-                        .foregroundColor(.gray)
-                }
+                ProgressView("Loading user…")
             }
         }
         .padding()
-        .onAppear(perform: loadData)
+        .onAppear(perform: startListening)
+        .onDisappear(perform: stopListening)
     }
 
     private var buttonTitle: String {
@@ -98,36 +77,53 @@ struct OtherUserProfileView: View {
         }
     }
 
-    private func loadData() {
-        FirestoreService.shared.fetchUser(withId: otherUserId) { result in
-            switch result {
-            case .success(let user):
-                DispatchQueue.main.async {
+    // MARK: - Real-time listeners
+
+    private func startListening() {
+        // 1. Listen to the other user's profile doc
+        FirestoreService.shared.listenToUser(userId: otherUserId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let user):
                     self.profile = user
-                    self.determineRequestState(user)
+                    self.updateRequestState(basedOn: user)
+                case .failure(let err):
+                    print("Profile listener error:", err)
                 }
-            case .failure(let err):
-                print("Error loading user: \(err)")
             }
         }
-    }
 
-    private func determineRequestState(_ user: UserProfile) {
-        // Now that id is non-optional, we can safely unwrap:
-        let otherId   = user.id
-        let currentId = currentUser.id
-
-        if currentUser.friends.contains(otherId!) {
-            self.requestState = .friends
-        } else {
-            FirestoreService.shared.checkPendingRequest(
-                from: currentId!,
-                to: otherId!
-            ) { isPending in
+        FirestoreService.shared.listenToOutgoingFriendRequest(
+            from: currentUser.id!,
+            to: otherUserId,
+            callback: { result in
                 DispatchQueue.main.async {
-                    self.requestState = isPending ? .pending : .none
+                    switch result {
+                    case .success(let req):
+                        if let req = req {
+                            self.requestState = req.status == "accepted" ? .friends : .pending
+                        } else {
+                            self.requestState = .none
+                        }
+                    case .failure(let err):
+                        print("Request listener error:", err)
+                    }
                 }
             }
+        )
+    }
+
+    private func stopListening() {
+        FirestoreService.shared.removeAllListeners()
+    }
+
+    // MARK: - Helpers
+
+    private func updateRequestState(basedOn otherProfile: UserProfile) {
+        // If they've already added you as a friend on their end,
+        // reflect that immediately, even without waiting for the request doc.
+        if otherProfile.friends.contains(currentUser.id!) {
+            requestState = .friends
         }
     }
 
@@ -148,3 +144,4 @@ struct OtherUserProfileView: View {
         }
     }
 }
+

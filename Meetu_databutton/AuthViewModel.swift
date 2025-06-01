@@ -77,7 +77,7 @@ class AuthViewModel: ObservableObject {
                         id: user.uid,
                         displayName: displayName,
                         email: user.email,
-                        photoUrl: nil,
+                        photoURL: nil,
                         friends: []
                     )
                     let db = Firestore.firestore()

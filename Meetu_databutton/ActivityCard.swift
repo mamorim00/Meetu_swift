@@ -1,98 +1,209 @@
-//
-//  ActivityCard.swift
-//  Meetu_databutton
-//
-//  Created by Marina Amorim on 21.5.2025.
-//
-
 import SwiftUI
 import FirebaseAuth
 
 struct ActivityCard: View {
     @EnvironmentObject var viewModel: FeedViewModel
+    @Environment(\.colorScheme) var colorScheme
+
     let activity: Activity
-    
-    // Computed so it doesn’t affect the init’s visibility
-    private var currentUserId: String? {
-        Auth.auth().currentUser?.uid
-    }
-    
-    /// True when the activity has reached its capacity
-    private var isFull: Bool {
-        activity.participantIds.count >= activity.maxParticipants
+    @State private var isDetailActive = false
+
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let displayDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium; f.timeStyle = .short
+        return f
+    }()
+
+    private var currentUserId: String? { Auth.auth().currentUser?.uid }
+    private var isFull: Bool { activity.participantIds.count >= activity.maxParticipants }
+
+    private var isUserParticipant: Bool {
+        guard let uid = currentUserId else { return false }
+        return activity.participantIds.contains(uid)
     }
 
+    private var isOwner: Bool {
+        guard let uid = currentUserId else { return false }
+        return activity.userId == uid
+    }
+
+    private var formattedDateTime: String {
+        guard let date = Self.isoFormatter.date(from: activity.dateTime) else { return "—" }
+        return Self.displayDateFormatter.string(from: date)
+    }
+
+    private var daysUntil: String {
+        guard let date = Self.isoFormatter.date(from: activity.dateTime) else { return "—" }
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
+        if days > 0 { return "in \(days) day\(days>1 ? "s": "")" }
+        else if days == 0 { return "today" }
+        else { return "\(-days) day(s) ago" }
+    }
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Title
-            Text(activity.title)
-                .font(.headline)
-                .foregroundColor(.primary)
+        ZStack {
+            VStack(alignment: .leading, spacing: 12) {
+                // Badges at top-right inside card
+                HStack {
+                    Spacer()
+                    Text(activity.category)
+                        .font(.caption2.weight(.bold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.appAccent(for: colorScheme).opacity(0.2))
+                        .foregroundColor(Color.appAccent(for: colorScheme))
+                        .clipShape(Capsule())
 
-            // Description
-            Text(activity.description)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            // Category & Location
-            HStack {
-                Text(activity.category)
-                Spacer()
-                Text(activity.location)
-            }
-            .font(.caption)
-            .foregroundColor(.gray)
-
-            // Date & Time
-            if let date = ISO8601DateFormatter().date(from: activity.dateTime) {
-                Text(date, style: .date) + Text(" ") + Text(date, style: .time)
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-            }
-
-            // Join/Leave button, Full badge, and participant count
-            HStack {
-                if let uid = currentUserId {
-                    if activity.participantIds.contains(uid) {
-                        // You're in—allow leaving
-                        Button("Leave") {
-                            viewModel.leave(activity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.red)
-
-                    } else if isFull {
-                        // Full and you're not in—show badge
-                        Text("Full")
-                            .font(.caption)
-                            .bold()
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(.systemRed).opacity(0.2))
-                            .foregroundColor(.red)
-                            .cornerRadius(8)
-
-                    } else {
-                        // Not full and not in—allow joining
-                        Button("Join") {
-                            viewModel.join(activity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(isFull)
+                    HStack(spacing: 4) {
+                        Image(systemName: activity.isPublic ? "globe" : "lock.fill")
+                        Text(activity.isPublic ? "Public" : "Private")
                     }
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.appMutedForeground(for: colorScheme).opacity(0.1))
+                    .foregroundColor(Color.appMutedForeground(for: colorScheme))
+                    .clipShape(Capsule())
                 }
 
-                Spacer()
+                // Title + Creator
+                Text(activity.title)
+                    .font(.system(.title3, design: .rounded).weight(.bold))
+                    .foregroundColor(Color.appForeground(for: colorScheme))
+                    .lineLimit(2)
 
-                // Always show count / capacity
-                Text("\(activity.participantIds.count)/\(activity.maxParticipants)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("Created by \(activity.displayName)")
+                    .font(.footnote)
+                    .foregroundColor(Color.appMutedForeground(for: colorScheme))
+
+                // Description
+                if !activity.description.isEmpty {
+                    Text(activity.description)
+                        .font(.subheadline)
+                        .foregroundColor(Color.appMutedForeground(for: colorScheme))
+                        .lineLimit(3)
+                }
+
+                Divider()
+
+                // Quick info rows
+                InfoRow(icon: "location.fill", text: activity.location, colorScheme: colorScheme)
+
+                // Date indicator + view details
+                HStack(spacing: 4) {
+                    Text(daysUntil)
+                        .font(.caption.weight(.medium))
+                    Spacer()
+                    Button("View details") {
+                        isDetailActive = true
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+                .foregroundColor(Color.appAccent(for: colorScheme))
+            }
+            .padding(16)
+            .background(
+                Color.appCardBackground(for: activity.category, scheme: colorScheme)
+                    .opacity(0.15)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.appAccent(for: colorScheme), lineWidth: 1)
+            )
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.2 : 0.1), radius: 6, x: 0, y: 3)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isDetailActive = true
             }
         }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .navigationDestination(isPresented: $isDetailActive) {
+            ActivityDetailView(activityId: activity.id!)
+        }
+    }
+}
+
+// Helper View for Icon + Text Row
+private struct InfoRow: View {
+    let icon: String
+    let text: String
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.callout)
+                .foregroundColor(Color.appAccent(for: colorScheme))
+                .frame(width: 22, alignment: .center)
+            Text(text)
+                .font(.caption)
+                .foregroundColor(Color.appMutedForeground(for: colorScheme))
+                .lineLimit(1)
+        }
+    }
+}
+
+
+// MARK: - Helper View for Status Pill (like "Full")
+private struct StatusPill: View {
+    let text: String
+    let textColor: Color
+    let backgroundColor: Color
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.bold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .foregroundColor(textColor)
+            .background(backgroundColor)
+            .clipShape(Capsule())
+    }
+}
+
+// MARK: — Minimalistic Capsule Button
+struct MinimalCapsuleButton: View {
+    @Environment(\.colorScheme) var colorScheme // << ADDED for theming
+
+    enum Style {
+        case primary, destructive, muted
+
+        func color(for scheme: ColorScheme) -> Color {
+            switch self {
+            case .primary:
+                return Color.appAccent(for: scheme)
+            case .destructive:
+                return Color.appDestructive(for: scheme)
+            case .muted:
+                return Color.appMutedForeground(for: scheme)
+            }
+        }
+    }
+
+    let title: String
+    let style: Style // << UPDATED
+    let action: () -> Void
+
+    var body: some View {
+        let activeColor = style.color(for: colorScheme)
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 12) // Increased padding slightly
+                .padding(.vertical, 8)
+                .frame(minHeight: 30) // Adjusted height
+        }
+        .buttonStyle(.plain) // To remove default button styling
+        .foregroundColor(activeColor)
+        .overlay(
+            Capsule().stroke(activeColor, lineWidth: 1.5) // Slightly thicker border
+        )
     }
 }

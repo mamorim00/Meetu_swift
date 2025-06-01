@@ -5,11 +5,18 @@
 //  Created by Marina Amorim on 21.5.2025.
 //
 
+
+//
+//  ChatView.swift
+//  Meetu_databutton
+//
+//  Created by Marina Amorim on 21.5.2025.
+//
+
 import SwiftUI
 import Combine
 import FirebaseAuth
 import FirebaseDatabase
-import FirebaseFirestore
 import FirebaseFirestore
 
 // MARK: — Chat List Models & ViewModel
@@ -29,51 +36,69 @@ final class ChatListViewModel: ObservableObject {
     private var rtdbHandle: DatabaseHandle?
 
     func fetchChats() {
-        guard Auth.auth().currentUser != nil else { return }
+        guard let currentUserID = Auth.auth().currentUser?.uid else {
+            print("ChatListViewModel: User not authenticated.")
+            return
+        }
 
+        // Clean up any previous observer
+        if let handle = rtdbHandle {
+            rtdb.child("user-chats").child(currentUserID)
+                .removeObserver(withHandle: handle)
+            rtdbHandle = nil
+        }
+
+        // 1️⃣ Observe only the current user's chat index
         rtdbHandle = rtdb
-            .child("activity-chats")
-            .observe(.value) { [weak self] snapshot in
+            .child("user-chats")
+            .child(currentUserID)
+            .observe(.value) { [weak self] snap in
                 guard let self = self else { return }
-                var loaded: [Chat] = []
-                let group = DispatchGroup()
 
-                for case let child as DataSnapshot in snapshot.children {
-                    let activityId = child.key
-                    group.enter()
+                // 2️⃣ Collect the activityIds this user is in
+                let chatIds = snap.children
+                    .compactMap { ($0 as? DataSnapshot)?.key }
+                guard !chatIds.isEmpty else {
+                    // No chats: clear UI
+                    DispatchQueue.main.async { self.chats = [] }
+                    return
+                }
 
-                    self.firestore
-                        .collection("activities")
-                        .document(activityId)
-                        .getDocument { docSnap, _ in
-                            defer { group.leave() }
-                            guard
-                                let data = docSnap?.data()
-                            else { return }
+                // 3️⃣ Batch-fetch all corresponding Firestore docs
+                self.firestore
+                    .collection("activities")
+                    .whereField(FieldPath.documentID(), in: chatIds)
+                    .getDocuments { result, error in
+                        if let error = error {
+                            print("Error fetching activities:", error)
+                            return
+                        }
+                        guard let docs = result?.documents else { return }
 
-                            let title = data["title"] as? String ?? "Activity"
-                            let lastMsgText = (data["lastMessage"] as? String)
-                                ?? (data["lastMessage"] as? [String:Any])?["text"] as? String
-                            let ts = (data["lastMessageTimestamp"] as? Timestamp)?
-                                .dateValue()
-
-                            loaded.append(
-                                Chat(
-                                    id: activityId,
-                                    name: title,
-                                    lastMessage: lastMsgText,
-                                    lastUpdated: ts
-                                )
+                        // 4️⃣ Map into your Chat model
+                        let loaded = docs.map { doc -> Chat in
+                            let d = doc.data()
+                            let title = d["title"] as? String ?? "Untitled Activity"
+                            let lastMsg = (d["lastMessage"] as? String)
+                                       ?? (d["lastMessage"] as? [String:Any])?["text"] as? String
+                            let ts = (d["lastMessageTimestamp"] as? Timestamp)?.dateValue()
+                            return Chat(
+                              id: doc.documentID,
+                              name: title,
+                              lastMessage: lastMsg,
+                              lastUpdated: ts
                             )
                         }
-                }
-
-                group.notify(queue: .main) {
-                    self.chats = loaded
                         .sorted {
-                            ($0.lastUpdated ?? .distantPast) > ($1.lastUpdated ?? .distantPast)
+                            ($0.lastUpdated ?? .distantPast)
+                            > ($1.lastUpdated ?? .distantPast)
                         }
-                }
+
+                        // 5️⃣ Push to UI
+                        DispatchQueue.main.async {
+                            self.chats = loaded
+                        }
+                    }
             }
     }
 
@@ -84,11 +109,93 @@ final class ChatListViewModel: ObservableObject {
     }
 }
 
+// MARK: — Chat List View
+
+struct ChatListView: View {
+    @StateObject private var viewModel = ChatListViewModel()
+    @Environment(\.colorScheme) var colorScheme
+
+    // 1️⃣ Read the binding from the environment that App injects
+    @Environment(\.selectedChatId) private var selectedChatId
+
+    // 2️⃣ Local @State to drive NavigationLink
+    @State private var navChatId: String? = nil
+
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(viewModel.chats) { chat in
+                    ZStack {
+                        // 3️⃣ Invisible NavigationLink bound to navChatId
+                        NavigationLink(
+                            destination: ChatView(chatId: chat.id, chatTitle: chat.name),
+                            tag: chat.id,
+                            selection: $navChatId
+                        ) {
+                            EmptyView()
+                        }
+                        .opacity(0)
+
+                        ChatRowView(chat: chat)
+                            .onTapGesture {
+                                // If user taps manually, navigate to that chat
+                                navChatId = chat.id
+                            }
+                    }
+                    .listRowBackground(Color.appBackground(for: colorScheme))
+                    .listRowSeparatorTint(Color.appBorder(for: colorScheme))
+                }
+            }
+            .background(Color.appBackground(for: colorScheme).edgesIgnoringSafeArea(.all))
+            .navigationTitle("Chats")
+            .toolbarColorScheme(colorScheme == .dark ? .dark : .light, for: .navigationBar)
+            .onAppear {
+                viewModel.fetchChats()
+            }
+            // 4️⃣ Watch for changes to the environment’s selectedChatId
+            .onChange(of: selectedChatId.wrappedValue) { newValue in
+                if let chatId = newValue {
+                    navChatId = chatId
+                    // Reset so future notifications work
+                    selectedChatId.wrappedValue = nil
+                }
+            }
+        }
+        .accentColor(Color.appAccent(for: colorScheme))
+    }
+}
+
+private struct ChatRowView: View {
+    @Environment(\.colorScheme) var colorScheme
+    let chat: Chat
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(chat.name)
+                    .font(.headline)
+                    .foregroundColor(Color.appForeground(for: colorScheme))
+                if let last = chat.lastMessage {
+                    Text(last)
+                        .font(.subheadline)
+                        .foregroundColor(Color.appMutedForeground(for: colorScheme))
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+        }
+        .padding(.vertical, 10)
+    }
+}
+
+// (Leave the rest of your ChatView, ChatViewModel, etc. unchanged.)
+
 // MARK: — Chat ViewModel & Message Model
 
 struct FirestoreChatMessage: Identifiable {
     let id: String
     let senderId: String
+    let senderName: String?
     let text: String
     let timestamp: Date?
 }
@@ -101,6 +208,8 @@ final class ChatViewModel: ObservableObject {
     private let rtdbRef: DatabaseReference
     private let firestore = Firestore.firestore()
     private var rtdbHandle: DatabaseHandle?
+    @Published var userProfiles: [String: Profile] = [:]
+
 
     init(chatId: String) {
         self.chatId = chatId
@@ -128,12 +237,14 @@ final class ChatViewModel: ObservableObject {
                     let senderId = dict["senderId"] as? String,
                     let text     = dict["text"]     as? String,
                     let tsNumber = dict["timestamp"] as? TimeInterval
+                   
                 else { continue }
-
+                let senderName = dict["senderName"] as? String  // new
                 let date = Date(timeIntervalSince1970: tsNumber / 1000)
                 let msg = FirestoreChatMessage(
                     id: child.key,
                     senderId: senderId,
+                    senderName: senderName,
                     text: text,
                     timestamp: date
                 )
@@ -145,6 +256,37 @@ final class ChatViewModel: ObservableObject {
             }
             DispatchQueue.main.async {
                 self.messages = loaded
+            }
+            
+            let toFetch = Set(self.messages.map(\.senderId))
+                            .subtracting(self.userProfiles.keys)
+
+            for uid in toFetch {
+              Firestore.firestore()
+                .collection("userProfiles")
+                .document(uid)
+                .getDocument { snap, _ in
+                  guard
+                    let data = snap?.data(),
+                    let displayName = data["displayName"] as? String
+                  else { return }
+                  let photoURL = data["photoURL"] as? String
+
+                  DispatchQueue.main.async {
+                    self.userProfiles[uid] = Profile(
+                      bio:           data["bio"]          as? String ?? "",
+                      createdAt:     Date(), // not used here
+                      displayName:   displayName,
+                      email:         data["email"]        as? String ?? "",
+                      friends:       data["friends"]      as? [String] ?? [],
+                      interests:     data["interests"]    as? [String] ?? [],
+                      lastLoginAt:   Date(), // not used
+                      location:      data["location"]     as? String ?? "",
+                      userId:        uid,
+                      photoURL:      photoURL
+                    )
+                  }
+                }
             }
         }
     }
@@ -187,47 +329,12 @@ final class ChatViewModel: ObservableObject {
         }
     }
 }
-
-// MARK: — Chat List View
-
-struct ChatListView: View {
-    @StateObject private var viewModel = ChatListViewModel()
-
-    var body: some View {
-        NavigationView {
-            List(viewModel.chats) { chat in
-                NavigationLink(destination: ChatView(chatId: chat.id, chatTitle: chat.name)) {
-                    ChatRowView(chat: chat)
-                }
-            }
-            .navigationTitle("Chats")
-            .onAppear { viewModel.fetchChats() }
-        }
-    }
-}
-
-private struct ChatRowView: View {
-    let chat: Chat
-
-    var body: some View {
-        HStack {
-            Text(chat.name).font(.headline)
-            Spacer()
-            if let last = chat.lastMessage {
-                Text(last)
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .lineLimit(1)
-            }
-        }
-        .padding(.vertical, 8)
-    }
-}
-
 // MARK: — Chat View
 
 struct ChatView: View {
     @Environment(\.presentationMode) private var presentationMode
+    @Environment(\.colorScheme) var colorScheme // << ADDED
+
     let chatId: String
     let chatTitle: String
     @StateObject private var vm: ChatViewModel
@@ -244,84 +351,135 @@ struct ChatView: View {
             HStack {
                 Button { presentationMode.wrappedValue.dismiss() } label: {
                     Image(systemName: "chevron.left")
+                        .font(.title3.weight(.medium))
+                        .foregroundColor(Color.appAccent(for: colorScheme)) // << THEMED
                 }
-                Text(chatTitle).font(.headline)
+                Text(chatTitle)
+                    .font(.headline)
+                    .foregroundColor(Color.appForeground(for: colorScheme)) // << THEMED
                 Spacer()
+                // You could add a call button or info button here
             }
             .padding()
-            .background(Color(.systemGray6))
-            .overlay(Divider(), alignment: .bottom)
+            .frame(height: 56) // Consistent header height
+            .background(Color.chatHeaderBackground(for: colorScheme).edgesIgnoringSafeArea(.top)) // << THEMED
+            .overlay(Divider().background(Color.appBorder(for: colorScheme)), alignment: .bottom) // << THEMED
 
             // Messages
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 12) {
+                    LazyVStack(spacing: 16) { // Increased spacing between messages
                         ForEach(vm.messages) { msg in
-                            messageRow(msg)
+                            messageRow(msg) // Will use colorScheme from environment
                         }
-                        Color.clear.frame(height: 1).id("bottom")
+                        Color.clear.frame(height: 1).id("bottom") // Anchor for scrolling
                     }
-                    .padding()
+                    .padding(.horizontal) // Padding for message bubbles from screen edges
+                    .padding(.vertical, 10)
                 }
-                .onChange(of: vm.messages.count) { _ in
-                    withAnimation {
+                .background(Color.appBackground(for: colorScheme)) // << THEMED
+                .onTapGesture { // Dismiss keyboard on tap
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .onChange(of: vm.messages.count) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        proxy.scrollTo("bottom", anchor: .bottom)
+                    }
+                }
+                .onAppear { // Scroll to bottom when view appears if messages exist
+                    if !vm.messages.isEmpty {
                         proxy.scrollTo("bottom", anchor: .bottom)
                     }
                 }
             }
 
-            Divider()
+            Divider().background(Color.appBorder(for: colorScheme)) // << THEMED
 
             // Input field
-            HStack {
-                TextField("Type a message…", text: $vm.newMessage)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(minHeight: 36)
+            HStack(spacing: 12) {
+                TextField("Type a message…", text: $vm.newMessage, onCommit: vm.sendMessage)
+                    .placeholder(when: vm.newMessage.isEmpty) { // Custom placeholder extension needed for color
+                        Text("Type a message…").foregroundColor(Color.appInputPlaceholder(for: colorScheme))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(Color.appInputBackground(for: colorScheme)) // << THEMED
+                        // Optional: Add a border
+                        // .stroke(Color.appBorder(for: colorScheme), lineWidth: 1)
+                    )
+                    .foregroundColor(Color.appForeground(for: colorScheme)) // << THEMED Text color
+                    .frame(minHeight: 40) // Consistent height
 
                 Button { vm.sendMessage() } label: {
                     Image(systemName: "paperplane.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(vm.newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.appMutedForeground(for: colorScheme) : Color.appAccent(for: colorScheme)) // << THEMED
                         .rotationEffect(.degrees(45))
                 }
-                .disabled(vm.newMessage.trimmingCharacters(in: .whitespaces).isEmpty)
-                .padding(.leading, 4)
+                .disabled(vm.newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.chatInputBarBackground(for: colorScheme).edgesIgnoringSafeArea(.bottom)) // << THEMED
         }
+        .background(Color.appBackground(for: colorScheme).edgesIgnoringSafeArea(.all)) // << THEMED Overall background
         .navigationBarHidden(true)
     }
-
     @ViewBuilder
     private func messageRow(_ msg: FirestoreChatMessage) -> some View {
         let isMine = msg.senderId == Auth.auth().currentUser?.uid
+
+        // Lookup cached profile
+        let profile     = vm.userProfiles[msg.senderId]
+        let displayName = profile?.displayName
+            ?? msg.senderName
+            ?? "Anonymous"
+        let photoURL    = profile?.photoURL
+
         HStack(alignment: .bottom, spacing: 8) {
-            if !isMine { AvatarView(name: msg.senderId) }
-            VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
-                if !isMine {
-                    Text(msg.senderId)
-                        .font(.caption)
+            if !isMine {
+                // ◉ Profile picture
+                ProfileImageView(urlString: photoURL, size: 36)
+                    .padding(.bottom, msg.timestamp != nil ? 4 : 0)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    // ◉ Display name
+                    Text(displayName)
+                        .font(.caption2).bold()
                         .foregroundColor(.secondary)
+
+                    // ◉ Message bubble
+                    Text(msg.text)
+                        .font(.body)
+                        .padding(10)
+                        .background(Color(.systemGray5))
+                        .foregroundColor(.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                Spacer(minLength: 0)
+            } else {
+                Spacer(minLength: 0)
+                // ◉ Own message bubble (no avatar)
                 Text(msg.text)
+                    .font(.body)
                     .padding(10)
-                    .background(isMine ? Color.accentColor : Color(.systemGray5))
-                    .foregroundColor(isMine ? .white : .primary)
-                    .cornerRadius(12)
-                if let date = msg.timestamp {
-                    Text(date, style: .time)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            if isMine { AvatarView(name: "You") }
         }
-        .frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)
+        .padding(.horizontal)
+        .padding(.vertical, 4)
     }
 }
+
+
 
 // MARK: — Simple AvatarView
 
 struct AvatarView: View {
+    @Environment(\.colorScheme) var colorScheme // << ADDED
     let name: String
     var body: some View {
         let initials = name
@@ -330,11 +488,30 @@ struct AvatarView: View {
             .prefix(2)
             .map(String.init)
             .joined()
+            .uppercased()
 
-        Text(initials)
-            .font(.caption2)
-            .frame(width: 32, height: 32)
-            .background(Color(.systemGray4))
-            .cornerRadius(16)
+        Text(initials.isEmpty ? "?" : initials) // Handle empty names
+            .font(.system(size: 16, weight: .medium)) // Slightly larger font for avatar
+            .foregroundColor(Color.avatarForeground(for: colorScheme)) // << THEMED
+            .frame(width: 36, height: 36) // Standard avatar size
+            .background(Color.avatarBackground(for: colorScheme)) // << THEMED
+            .clipShape(Circle()) // Use Circle for a perfect circle
+    }
+}
+
+
+// MARK: - View Extension for Placeholder
+// Add this extension to your project, e.g., in a ViewModifiers.swift file
+
+extension View {
+    func placeholder<Content: View>(
+        when shouldShow: Bool,
+        alignment: Alignment = .leading,
+        @ViewBuilder placeholder: () -> Content) -> some View {
+
+        ZStack(alignment: alignment) {
+            placeholder().opacity(shouldShow ? 1 : 0)
+            self
+        }
     }
 }
